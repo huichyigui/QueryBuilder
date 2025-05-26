@@ -4,8 +4,8 @@ namespace QueryBuilder.Models
 {
     public class WhereClause : ICondition
     {
-        public required string Column { get; set; }
-        public required SqlOperator Operator { get; set; }
+        public string Column { get; set; }
+        public SqlOperator Operator { get; set; }
 
         private object? _value;
         public object? Value 
@@ -17,6 +17,13 @@ namespace QueryBuilder.Models
                     throw new ArgumentNullException(nameof(value), $"Operator '{Operator}' on column '{Column}' requires a non-null value.");
                 _value = value;
             }
+        }
+
+        public WhereClause(string column, SqlOperator op, object? value)
+        {
+            Column = column;
+            Operator = op;
+            Value = value;
         }
 
         public string ToSql()

@@ -4,65 +4,93 @@ using System.Text;
 
 namespace QueryBuilder.Builders
 {
-    public class SelectStatement : QueryStatementBase
+    public class SelectStatement : QueryStatementBase<SelectStatement>
     {
-        public string Select { get; set; } = "*";
+        private readonly List<OrderByClause> _orderByClauses = new();
 
-        private int _top;
-        public int Top 
+        private string _select { get; set; } = "*";
+        private int _top { get; set; } = 0;
+        private bool _distinct { get; set; }
+        private string _from { get; set; }
+        private string _groupBy { get; set; }
+
+        public SelectStatement Select(string columns)
         {
-            get => _top; 
-            set
-            {
-                if (value < 0 || value == 0) throw new ArgumentOutOfRangeException(nameof(value), "TOP value must be greater than 0.");
-
-                _top = value;
-            }
+            if (string.IsNullOrWhiteSpace(columns)) throw new ArgumentException("Columns cannot be null or empty.", nameof(columns));
+            _select = columns;
+            return this;
         }
 
-        public bool Distinct { get; set; } = false;
-        public string From { get; set; }
-        public SqlOrderBy OrderBy { get; set; } = SqlOrderBy.Asc;
-        public string OrderByColumn { get; set; }
-        public string? GroupBy { get; set; }
-
-        public SelectStatement Where(string column, SqlOperator op, object value)
+        public SelectStatement Top(int value)
         {
-            var condition = new WhereClause
+            if (value <= 0)
+                throw new ArgumentOutOfRangeException(nameof(value), "TOP value must be greater than 0.");
+
+            _top = value;
+            return this;
+        }
+
+        public SelectStatement Distinct(bool distinct = true)
+        {
+            _distinct = distinct;
+            return this;
+        }
+
+        public SelectStatement From(string table)
+        {
+            if (string.IsNullOrWhiteSpace(table)) throw new ArgumentException("Table name cannot be null or empty.", nameof(table));
+            _from = table;
+            return this;
+        }
+
+        public SelectStatement OrderBy(string column)
+        {
+            return OrderBy(column, SqlOrderBy.Asc);
+        }
+
+        public SelectStatement OrderBy(string column, SqlOrderBy order)
+        {
+            _orderByClauses.Add(new OrderByClause
             {
                 Column = column,
-                Operator = op,
-                Value = value
-            };
-            _where = condition;
+                Order = order
+            });
             return this;
-        } 
+        }
+
+        public SelectStatement GroupBy(string columns)
+        {
+            if (string.IsNullOrWhiteSpace(columns)) throw new ArgumentException("Group by columns cannot be null or empty.", nameof(columns));
+
+            _groupBy = columns;
+            return this;
+        }
 
         public string Build()
         {
-            if (string.IsNullOrWhiteSpace(Select)) throw new InvalidOperationException("SELECT clause is missing.");
-            if (string.IsNullOrWhiteSpace(From)) throw new InvalidOperationException("FROM clause is missing.");
+            if (string.IsNullOrWhiteSpace(_select)) throw new InvalidOperationException("SELECT clause is missing.");
+            if (string.IsNullOrWhiteSpace(_from)) throw new InvalidOperationException("FROM clause is missing.");
 
             StringBuilder sb = new StringBuilder();
 
             sb.Append("SELECT ");
 
-            if (Distinct)
+            if (_distinct)
                 sb.Append("DISTINCT ");
 
-            if (Top > 0)
-                sb.Append($"TOP {Top} ");
+            if (_top > 0)
+                sb.Append($"TOP {_top} ");
 
-            sb.Append(Select);
-            sb.Append($" FROM {From}");
+            sb.Append(_select);
+            sb.Append($" FROM {_from}");
             sb.Append(BuildJoins());
             sb.Append(BuildWhere());
 
-            if (!string.IsNullOrWhiteSpace(OrderByColumn))
-                sb.Append($" ORDER BY {OrderByColumn} {OrderBy.ToString().ToUpper()}");
+            if (!string.IsNullOrWhiteSpace(_groupBy))
+                sb.Append($" GROUP BY {_groupBy}");
 
-            if (!string.IsNullOrWhiteSpace(GroupBy))
-                sb.Append($" GROUP BY {GroupBy}");
+            if (_orderByClauses.Any())
+                sb.Append(" ORDER BY ").Append(string.Join(", ", _orderByClauses));
 
             return sb.ToString();
         }

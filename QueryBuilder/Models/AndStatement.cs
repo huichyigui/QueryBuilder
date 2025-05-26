@@ -10,12 +10,9 @@ namespace QueryBuilder.Models
     {
         private readonly List<ICondition> _conditions;
 
-        public AndStatement(ICondition left, ICondition right)
+        public AndStatement(params ICondition[] conditions)
         {
-            if (left == null) throw new ArgumentNullException(nameof(left));
-            if (right == null) throw new ArgumentNullException(nameof(right));
-
-            _conditions = new List<ICondition> { left, right };
+            _conditions = conditions.ToList();
         }
 
         public string ToSql()

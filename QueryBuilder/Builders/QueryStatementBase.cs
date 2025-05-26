@@ -4,94 +4,69 @@ using System.Text;
 
 namespace QueryBuilder.Builders
 {
-    public abstract class QueryStatementBase
+    public abstract class QueryStatementBase<T> where T : QueryStatementBase<T>
     {
         protected ICondition _where;
         protected readonly List<JoinClause> _joins = new();
 
-        public QueryStatementBase Where(string column, SqlOperator op)
+        public T Where(string column, SqlOperator op)
         {
             return Where(column, op, null);
         }
 
-        public QueryStatementBase Where(string column, SqlOperator op, object value)
+        public T Where(string column, SqlOperator op, object value)
         {
-            var newCondition = new WhereClause
-            {
-                Column = column,
-                Operator = op,
-                Value = value
-            };
-
-            if (_where == null)
-                _where = newCondition;
-            else
-                _where = new AndStatement(_where, newCondition);
-
-            return this;
+            var newCondition = new WhereClause(column, op, value);
+            _where = newCondition;
+            return (T)this;
         }
 
-        public QueryStatementBase Where(ICondition condition)
+        public T Where(ICondition condition)
         {
-            if (_where == null)
-                _where = condition;
-            else
-                _where = new AndStatement(_where, condition);
-
-            return this;
+            _where = condition;
+            return (T)this;
         }
 
-        public QueryStatementBase AndWhere(ICondition condition)
+        public T AndWhere(ICondition condition)
         {
             if (_where == null)
                 throw new InvalidOperationException("Cannot use AndWhere without a previous Where condition.");
 
             _where = new AndStatement(_where, condition);
-            return this;
+            return (T)this;
         }
 
-        public QueryStatementBase AndWhere(string column, SqlOperator op, object value)
+        public T AndWhere(string column, SqlOperator op, object value)
         {
             if (_where == null)
                 throw new InvalidOperationException("Cannot use AndWhere without a previous Where condition.");
 
-            var newCondition = new WhereClause
-            {
-                Column = column,
-                Operator = op,
-                Value = value
-            };
+            var newCondition = new WhereClause(column, op, value);
 
             _where = new AndStatement(_where, newCondition);
-            return this;
+            return (T)this;
         }
 
-        public QueryStatementBase OrWhere(ICondition condition)
+        public T OrWhere(ICondition condition)
         {
             if (_where == null)
                 throw new InvalidOperationException("Cannot use OrWhere without a previous Where condition.");
 
             _where = new OrStatement(_where, condition);
-            return this;
+            return (T)this;
         }
 
-        public QueryStatementBase OrWhere(string column, SqlOperator op, object value)
+        public T OrWhere(string column, SqlOperator op, object value)
         {
             if (_where == null)
                 throw new InvalidOperationException("Cannot use OrWhere without a previous Where condition.");
 
-            var newCondition = new WhereClause
-            {
-                Column = column,
-                Operator = op,
-                Value = value
-            };
-
+            var newCondition = new WhereClause(column, op, value);
             _where = new OrStatement(_where, newCondition);
-            return this;
+            return (T)this;
         }
 
-        public QueryStatementBase Join(string table, SqlJoin join, string condition)
+        public T Join(string table, SqlJoin join, string condition)
         {
             _joins.Add(new JoinClause
             {
@@ -100,7 +75,7 @@ namespace QueryBuilder.Builders
                 OnCondition = condition
             });
 
-            return this;
+            return (T)this;
         }
 
         protected string BuildJoins()
